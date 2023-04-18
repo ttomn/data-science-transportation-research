@@ -1,8 +1,13 @@
-numpy
-pandas
+numpy~=1.23.5
+pandas~=1.5.2
+geopandas~=0.12.2
 pandas_profiling
 seaborn
-folium
+folium~=0.13.0
+opencage~=2.1.0
+shapely~=2.0.1
+geopy~=2.3.0
 plotly
 statsmodels
 kaleido
+ipython~=8.7.0

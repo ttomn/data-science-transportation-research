@@ -5,6 +5,8 @@ import folium
 from shapely.geometry import Point
 import warnings
 
+from utils import ours_read_csv
+
 warnings.filterwarnings("ignore")
 
 DIR_PATH_TOM = "C:\\Users\\ttomn\\OneDrive\\Desktop\\data-science-transportation-research"
@@ -27,7 +29,7 @@ IS_NON_GEO_FILES = False
 
 
 def split_file(file_path: str, frag_amount: int):
-    df = pd.read_csv(file_path)
+    df = ours_read_csv(file_path)
     frag_size = df.shape[0] // frag_amount
     for i in range(frag_amount):
         frag_df = df.iloc[i * frag_size:(i + 1) * frag_size]
@@ -35,7 +37,7 @@ def split_file(file_path: str, frag_amount: int):
 
 
 def add_columns_non_geo(streets_df, streets_buffered_df, dir_path, file_name):
-    df = pd.read_csv(f"{dir_path}\\{file_name}")
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
     longitude, latitude = get_long_lat_names(df)
     df_not_na = df[(df[longitude].notna()) & (df[latitude].notna())]
     print(f"data had {df.shape[0]}"

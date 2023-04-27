@@ -34,8 +34,8 @@ def split_file(file_path: str, frag_amount: int):
         frag_df.to_csv(f"{file_path[:-4]}{i}{file_path[-4:]}")
 
 
-def add_columns_non_geo(streets_df, streets_buffered_df, file_name):
-    df = pd.read_csv(f"{DIR_PATH_TOM}\\{file_name}")
+def add_columns_non_geo(streets_df, streets_buffered_df, dir_path, file_name):
+    df = pd.read_csv(f"{dir_path}\\{file_name}")
     longitude, latitude = get_long_lat_names(df)
     df_not_na = df[(df[longitude].notna()) & (df[latitude].notna())]
     print(f"data had {df.shape[0]}"
@@ -53,7 +53,7 @@ def add_columns_non_geo(streets_df, streets_buffered_df, file_name):
         return streets_df.iloc[street_index]["geometry"], street_index
 
     df_not_na[['STREET', 'ST_INDEX']] = df_not_na.apply(get_closest_street, axis=1, result_type='expand')
-    df_not_na.to_csv(f"{DIR_PATH_TOM}\\with_streets_not_na_{file_name}")
+    df_not_na.to_csv(f"{dir_path}\\with_streets_not_na_{file_name}")
     # plot_with_street_non_geo(df_not_na)
 
 
@@ -69,9 +69,10 @@ def get_long_lat_names(df):
 
 non_intersect_counter = 0
 
-def add_columns_geo(streets_df, streets_buffered_df, file_name):
+
+def add_columns_geo(streets_df, streets_buffered_df, dir_path, file_name):
     print(f"Starting to proccess {file_name}")
-    df = gpd.read_file(f"{DIR_PATH_MAX}\\{file_name}")
+    df = gpd.read_file(f"{dir_path}\\{file_name}")
     global non_intersect_counter
     non_intersect_counter = 0
 
@@ -95,7 +96,7 @@ def add_columns_geo(streets_df, streets_buffered_df, file_name):
     print(f"data have {df.shape[0]}"
           f" rows and {df['ST_INDEX'].isna().sum()} st_index null values and "
           f"{df['STREET'].isna().sum()} street null values")
-    df.to_csv(f"{DIR_PATH_MAX}\\with_streets_{file_name}")
+    df.to_csv(f"{dir_path}\\with_streets_{file_name}")
     # plot_with_street_geo_data(df)
 
 
@@ -124,10 +125,10 @@ def main(dir_path):
     streets_buffered_df = streets_df.buffer(0.00015)
     for file_name in GEO_FILES_NAMES_TO_EXECUTE:
         if IS_GEO_FILES:
-            add_columns_geo(streets_df, streets_buffered_df, file_name)
+            add_columns_geo(streets_df, streets_buffered_df, dir_path, file_name)
         if IS_NON_GEO_FILES:
-            add_columns_non_geo(streets_df, streets_buffered_df, file_name)
+            add_columns_non_geo(streets_df, streets_buffered_df, dir_path, file_name)
 
 
 if __name__ == '__main__':
-    main(DIR_PATH_MAX)
+    main(DIR_PATH_TOM)

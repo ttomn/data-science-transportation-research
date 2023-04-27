@@ -28,13 +28,13 @@ weekday_mapping = {
 }
 
 
-def unit_summons():
-    summons_df = pd.read_csv(f"{DIR_PATH_TOM}\\{SUMMONS_FILE}")
+def unit_summons(dir_path):
+    summons_df = pd.read_csv(f"{dir_path}\\{SUMMONS_FILE}")
     old_summons_df = pd.read_csv(f"{DIR_PATH_TOM}\\{OLD_SUMMONS_FILE}")
     summons_df = create_summons_cols(summons_df)
     old_summons_df = create_summons_cols(old_summons_df)
     all_summons = pd.concat([summons_df, old_summons_df], axis=0)
-    all_summons.to_csv("DIR_PATH_TOM}\\united_summons.csv")
+    all_summons.to_csv(f"{dir_path}\\united_summons.csv")
 
 
 def create_summons_cols(df):
@@ -58,7 +58,7 @@ def get_timing_cols(df, date_col_name, time_col_name):
 
 
 def main(dir_path):
-    unit_summons()
+    unit_summons(dir_path)
 
 
 if __name__ == '__main__':

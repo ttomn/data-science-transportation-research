@@ -19,6 +19,20 @@ FILES_NAMES_TO_EXECUTE = [SUMMONS_FILE, OLD_SUMMONS_FILE, COLLISIONS_FILE]
 COLS_TO_TAKE_FROM_SUMMONS = ["VIOLATION_DATE", "VIOLATION_TIME", "VIOLATION_CODE", "VEH_CATEGORY",
                              "STREET", "ST_INDEX"]
 
+COLS_TO_TAKE_FROM_COLLISIONS = ['CRASH DATE', 'CRASH TIME', 'NUMBER OF PERSONS INJURED',
+                                'NUMBER OF PERSONS KILLED', 'NUMBER OF PEDESTRIANS INJURED',
+                                'NUMBER OF PEDESTRIANS KILLED', 'NUMBER OF CYCLIST INJURED',
+                                'NUMBER OF CYCLIST KILLED', 'NUMBER OF MOTORIST INJURED',
+                                'NUMBER OF MOTORIST KILLED', 'CONTRIBUTING FACTOR VEHICLE 1',
+                                'CONTRIBUTING FACTOR VEHICLE 2', 'CONTRIBUTING FACTOR VEHICLE 3',
+                                'CONTRIBUTING FACTOR VEHICLE 4', 'CONTRIBUTING FACTOR VEHICLE 5',
+                                'COLLISION_ID', 'VEHICLE TYPE CODE 1', 'VEHICLE TYPE CODE 2',
+                                'VEHICLE TYPE CODE 3', 'VEHICLE TYPE CODE 4', 'VEHICLE TYPE CODE 5',
+                                'STREET', 'ST_INDEX']
+PARAMS_FOR_PROCESS = {
+    COLLISIONS_FILE: [COLS_TO_TAKE_FROM_COLLISIONS, 'CRASH DATE', 'CRASH TIME']
+}
+
 weekday_mapping = {
     'Monday': 0,
     'Tuesday': 1,
@@ -45,6 +59,21 @@ def create_summons_cols(df):
     return df
 
 
+def aggregate_dfs(dir_path, files_names, cols_to_aggregate):
+    for file_name in files_names:
+        print(f"Start execute file {file_name}:")
+        df = ours_read_csv(f"{DIR_PATH_TOM}\\{file_name}")
+        df_params = PARAMS_FOR_PROCESS[file_name]
+        df = df[df_params[0]]
+        df = get_timing_cols(df, df_params[1], df_params[2])
+        df.to_csv(f"{dir_path}\\timed_{file_name}.csv")
+        df = agg_by_time(df, cols_to_aggregate)
+        df.to_csv(f"{dir_path}\\agg_{file_name}.csv")
+        print(f"\n\n\n############################################")
+        print(f"Finished execute file {file_name}")
+        print(f"############################################\n\n\n")
+
+
 def get_timing_cols(df, date_col_name, time_col_name):
     date = pd.DatetimeIndex(df[date_col_name])
     time = pd.DatetimeIndex(df[time_col_name])
@@ -59,17 +88,6 @@ def get_timing_cols(df, date_col_name, time_col_name):
     return df
 
 
-def aggregate_dfs(dir_path, files_names, cols_to_aggregate):
-    for file_name in files_names:
-        print(f"Start execute file {file_name}:")
-        df = ours_read_csv(f"{DIR_PATH_TOM}\\{file_name}")
-        df = agg_by_time(df, cols_to_aggregate)
-        df.to_csv(f"{dir_path}\\agg_{file_name}.csv")
-        print(f"\n\n\n############################################")
-        print(f"Finished execute file {file_name}")
-        print(f"############################################\n\n\n")
-
-
 def agg_by_time(df, cols_to_aggregate):
     df["AMOUNT"] = 0
     new_col_name = "AMOUNT"
@@ -81,9 +99,12 @@ def agg_by_time(df, cols_to_aggregate):
     return df
 
 
+# def concat_dfs
+
 def main(dir_path):
     # unit_summons(dir_path)
-    aggregate_dfs(dir_path, files_names=["united_summons.csv"], cols_to_aggregate=["YEAR", "MONTH"])
+    aggregate_dfs(dir_path, files_names=["with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv"],
+                  cols_to_aggregate=["YEAR", "MONTH"])
 
 
 if __name__ == '__main__':

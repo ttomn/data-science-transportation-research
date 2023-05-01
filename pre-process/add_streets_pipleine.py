@@ -21,9 +21,9 @@ FILES_NAMES_TO_EXECUTE = ["VZV_Speed Limits.geojson",
 
 GEO_FILES_NAMES_TO_EXECUTE = ["VZV_Speed Humps.geojson",
                               "VZV_Speed Limits.geojson",
-                              "VZV_Leading Pedestrian Interval Signals.geojson",
                               "VZV_Street Improvement Projects (SIPs) intersections.geojson",
                               "VZV_Turn Traffic Calming.geojson",
+                              "VZV_Leading Pedestrian Interval Signals.geojson",
                               "Points Of Interest.geojson"]
 
 IS_GEO_FILES = True

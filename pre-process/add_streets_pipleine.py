@@ -28,14 +28,6 @@ IS_GEO_FILES = True
 IS_NON_GEO_FILES = False
 
 
-def split_file(file_path: str, frag_amount: int):
-    df = ours_read_csv(file_path)
-    frag_size = df.shape[0] // frag_amount
-    for i in range(frag_amount):
-        frag_df = df.iloc[i * frag_size:(i + 1) * frag_size]
-        frag_df.to_csv(f"{file_path[:-4]}{i}{file_path[-4:]}")
-
-
 def add_columns_non_geo(streets_df, streets_buffered_df, dir_path, file_name):
     df = ours_read_csv(f"{dir_path}\\{file_name}")
     longitude, latitude = get_long_lat_names(df)

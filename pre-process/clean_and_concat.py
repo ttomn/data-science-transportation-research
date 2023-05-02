@@ -70,6 +70,22 @@ weekday_mapping = {
 }
 
 
+def split_file(file_path: str, frag_amount: int):
+    df = ours_read_csv(file_path)
+    frag_size = df.shape[0] // frag_amount
+    for i in range(frag_amount):
+        frag_df = df.iloc[i * frag_size:(i + 1) * frag_size]
+        frag_df.to_csv(f"{file_path[:-4]}{i}{file_path[-4:]}")
+
+
+def unite_file(file_path: str, frag_amount: int):
+    dfs = []
+    for i in range(frag_amount):
+        dfs.append(ours_read_csv(f"{file_path[:-4]}{i}{file_path[-4:]}"))
+    df = pd.concat(dfs)
+    df.to_csv(file_path)
+
+
 def unit_summons(dir_path):
     summons_df = ours_read_csv(f"{dir_path}\\{CURR_SUMMONS_FILE}")
     old_summons_df = ours_read_csv(f"{DIR_PATH_TOM}\\{OLD_SUMMONS_FILE}")
@@ -205,9 +221,10 @@ def concat_summons_df(dir_path, main_file, file_name):
 
 
 def main(dir_path):
+    split_file(file_path=f"{dir_path}\\summons_and_poi_and_collisions_and_streets.csv", frag_amount=5)
     # create_main_df(dir_path, "Centerline.csv")
-    concat_summons_df(dir_path, "poi_and_collisions_and_streets.csv",
-                      "agg_united_summons.csv")
+    # concat_summons_df(dir_path, "poi_and_collisions_and_streets.csv",
+    #                   "agg_united_summons.csv")
     # df_streets = ours_read_csv(f"{dir_path}\\Centerline.csv")
     # df = ours_read_csv(f"{dir_path}\\agg_timed_with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv")
     # ohe_poi(dir_path, "timed_with_streets_Points Of Interest.csv")

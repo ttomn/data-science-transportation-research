@@ -159,10 +159,57 @@ def ohe_poi(dir_path, file_name):
     return df
 
 
+def sum_poi_in_same_street(dir_path, file_name):
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    df = df.drop(columns=["STREET", "MONTH", "YEAR", "DAY", "DAY_OF_WEEK", "WEEK_NUMBER"])
+    df = df.groupby("ST_INDEX").sum().reset_index(names="ST_INDEX")
+    df.to_csv(f"{dir_path}\\sumed_{file_name}")
+
+
+def create_main_df(dir_path, main_file):
+    main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    main_df = main_df.reset_index(names="ST_INDEX")
+    main_df = main_df[["ST_INDEX", "the_geom"]]
+    month_df = pd.DataFrame({"MONTH": np.arange(1, 13)})
+    year_df = pd.DataFrame({"YEAR": np.arange(2012, 2024)})
+    main_df = main_df.merge(month_df, how="cross").merge(year_df, how="cross")
+    main_df.to_csv(f"{dir_path}\\timed_{main_file}")
+
+
+def concat_colli_df(dir_path, main_file, file_name):
+    main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    df_merged = pd.merge(main_df, df, on=['ST_INDEX', "YEAR", "MONTH"], how='left')
+    df_merged = df_merged.drop(columns="STREET")
+    df_merged["AMOUNT_YEAR_MONTH_ST_INDEX"] = df_merged["AMOUNT_YEAR_MONTH_ST_INDEX"].fillna(0)
+    df_merged.to_csv(f"{dir_path}\\collisions_and_streets.csv")
+
+
+def concat_poi_df(dir_path, main_file, file_name):
+    main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    df_merged = pd.merge(main_df, df, on=['ST_INDEX'], how='left')
+    df_merged.iloc[:, -13:] = df_merged.iloc[:, -13:].fillna(0)
+    df_merged.to_csv(f"{dir_path}\\poi_and_{main_file}")
+
+
+def concat_summons_df(dir_path, main_file, file_name):
+    main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    main_df = main_df.rename(columns={"AMOUNT_YEAR_MONTH_ST_INDEX": "COLLISIONS"})
+    df = df.rename(columns={"AMOUNT_YEAR_MONTH_ST_INDEX": "SUMMONS"})
+    df_merged = pd.merge(main_df, df, on=['ST_INDEX', "YEAR", "MONTH"], how='left')
+    df_merged = df_merged.drop(columns="STREET")
+    df_merged["SUMMONS"] = df_merged["SUMMONS"].fillna(0)
+    df_merged.to_csv(f"{dir_path}\\summons_and_{main_file}")
+
+
 def main(dir_path):
-    df_streets = ours_read_csv(f"{dir_path}\\Centerline.csv")
-    df = ours_read_csv(f"{dir_path}\\agg_timed_with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv")
-    print("hi")
+    # create_main_df(dir_path, "Centerline.csv")
+    concat_summons_df(dir_path, "poi_and_collisions_and_streets.csv",
+                      "agg_united_summons.csv")
+    # df_streets = ours_read_csv(f"{dir_path}\\Centerline.csv")
+    # df = ours_read_csv(f"{dir_path}\\agg_timed_with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv")
     # ohe_poi(dir_path, "timed_with_streets_Points Of Interest.csv")
     # aggregate_dfs(dir_path, files_names=[POI_FILE],
     #               cols_to_aggregate=["YEAR", "MONTH", "ST_INDEX"])

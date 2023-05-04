@@ -109,8 +109,8 @@ def aggregate_dfs(dir_path, files_names, cols_to_aggregate):
         df = df[df_params[0]]
         df = get_timing_cols(df, df_params[1], df_params[2])
         df.to_csv(f"{dir_path}\\timed_{file_name}")
-        # df = agg_by_time_and_loc(df, cols_to_aggregate)
-        # df.to_csv(f"{dir_path}\\agg_{file_name}")
+        df = agg_by_time_and_loc(df, cols_to_aggregate)
+        df.to_csv(f"{dir_path}\\agg_{file_name}")
         print(f"\n\n\n############################################")
         print(f"Finished execute file {file_name}")
         print(f"############################################\n\n\n")
@@ -218,6 +218,12 @@ def concat_summons_df(dir_path, main_file, file_name):
     df_merged = df_merged.drop(columns="STREET")
     df_merged["SUMMONS"] = df_merged["SUMMONS"].fillna(0)
     df_merged.to_csv(f"{dir_path}\\summons_and_{main_file}")
+
+
+def remove_future_data(dir_path, file_name):
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    df = df[(df['MONTH'] < 3) | (df['YEAR'] < 2023)]
+    df.to_csv(f"{dir_path}\\{file_name}")
 
 
 def main(dir_path):

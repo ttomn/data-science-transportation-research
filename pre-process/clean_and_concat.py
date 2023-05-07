@@ -49,13 +49,16 @@ COLS_TO_TAKE_FROM_LEADING_PEDESTRIAN = ("STREET", "ST_INDEX", "install_da")
 
 COLS_TO_TAKE_FROM_TURN_CALMING = ("STREET", "ST_INDEX", "completion")
 
-
 COLS_TO_TAKE_FROM_POI = ["created", "facility_t", 'STREET', 'ST_INDEX']
 
 PARAMS_FOR_PROCESS = {
     COLLISIONS_FILE: [COLS_TO_TAKE_FROM_COLLISIONS, 'CRASH DATE', 'CRASH TIME'],
     SUMMONS_FILE: [COLS_TO_TAKE_FROM_SUMMONS, "VIOLATION_DATE", "VIOLATION_TIME"],
-    POI_FILE: [COLS_TO_TAKE_FROM_POI, "created", None]
+    POI_FILE: [COLS_TO_TAKE_FROM_POI, "created", None],
+    HUMPS_FILE: [COLS_TO_TAKE_FROM_HUMPS, 'end_date'],
+    INTERSECTION_IMPROVEMENT_FILE: [COLS_TO_TAKE_FROM_INTERSECTION_IMPROVEMENT, "end_date"],
+    LEADING_PEDESTRIAN_FILE: [COLS_TO_TAKE_FROM_LEADING_PEDESTRIAN, "install_da"],
+    TURN_CALMING_FILE: [COLS_TO_TAKE_FROM_TURN_CALMING, "completion"]
 }
 POI_MAPPING = {
     1: "Residential",
@@ -71,11 +74,6 @@ POI_MAPPING = {
     11: "Public Safety",
     12: "Water",
     13: "Miscellaneous"
-    COLLISIONS_FILE: [COLS_TO_TAKE_FROM_COLLISIONS, 'CRASH DATE', 'CRASH TIME'],
-    HUMPS_FILE: [COLS_TO_TAKE_FROM_HUMPS, 'end_date'],
-    INTERSECTION_IMPROVEMENT_FILE: [COLS_TO_TAKE_FROM_INTERSECTION_IMPROVEMENT, "end_date"],
-    LEADING_PEDESTRIAN_FILE: [COLS_TO_TAKE_FROM_LEADING_PEDESTRIAN, "install_da"],
-    TURN_CALMING_FILE: [COLS_TO_TAKE_FROM_TURN_CALMING, "completion"]
 }
 
 weekday_mapping = {
@@ -163,7 +161,6 @@ def get_timing_cols_geo(df, date_col_name):
     return df
 
 
-
 def get_date_cols_geo_files(dir_path, files_names):
     for file_name in files_names:
         print(f"Start execute file {file_name}:")
@@ -179,10 +176,10 @@ def get_date_cols_geo_files(dir_path, files_names):
         print(f"############################################\n\n\n")
 
 
-
-
-
 def agg_by_time(df, cols_to_aggregate):
+    pass
+
+
 def agg_by_time_and_loc(df, cols_to_aggregate):
     df["AMOUNT"] = 0
     new_col_name = "AMOUNT"
@@ -270,6 +267,46 @@ def concat_summons_df(dir_path, main_file, file_name):
     df_merged.to_csv(f"{dir_path}\\summons_and_{main_file}")
 
 
+def concat_binary_column_df(dir_path, main_file, file_name, new_binary_column, new_file_name):
+    main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    df = df.drop(columns=["DAY", "DAY_OF_WEEK", "WEEK_NUMBER"])
+    df = df[df['YEAR'] >= 2012]
+    df = df.drop_duplicates(subset=['ST_INDEX', 'MONTH', 'YEAR'])
+    df_merged = pd.merge(main_df, df, on=['ST_INDEX', "YEAR", "MONTH"], how='left')
+    df_merged[new_binary_column] = df_merged['STREET'].apply(lambda x: 1 if pd.notnull(x) else 0)
+    df_merged = df_merged.drop(columns=["STREET"])
+    df_merged = df_merged.sort_values(['ST_INDEX', 'YEAR', 'MONTH'])
+    groups = df_merged.groupby('ST_INDEX')
+    df_merged[new_binary_column] = groups[new_binary_column].cummax()
+    df_merged.to_csv(f"{dir_path}\\{new_file_name}{main_file}")
+
+
+def concat_speed_humps_df(dir_path, main_file, file_name):
+    main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    df_speed_humps_no_dup = clean_speed_humps(df)
+    df_merged = pd.merge(main_df, df_speed_humps_no_dup, on=['ST_INDEX', "YEAR", "MONTH"], how='left')
+    df_merged.sort_values(['ST_INDEX', 'YEAR', 'MONTH'], inplace=True)
+    groups = df_merged.groupby('ST_INDEX')
+    df_merged['HUMPS_AMOUNT'] = groups['HUMPS_AMOUNT'].cummax()
+    df_merged.to_csv(f"{dir_path}\\speed_humps_and_{main_file}")
+
+
+def clean_speed_humps(df):
+    df = df.drop(columns=["DAY", "DAY_OF_WEEK", "WEEK_NUMBER"])
+    mask = df['YEAR'] < 2012
+    df.loc[mask, 'YEAR'] = 2012
+    df.loc[mask, 'MONTH'] = 1
+    max_humps = df.groupby(['ST_INDEX', 'YEAR', 'MONTH'])['humps_amount'].max().reset_index()
+    # merge the max_humps DataFrame back into the original DataFrame
+    df_no_dup = pd.merge(df, max_humps, on=['ST_INDEX', 'YEAR', 'MONTH'], how='left')
+    df_no_dup.drop(columns="humps_amount_x", inplace=True)
+    df_no_dup.rename(columns={'humps_amount_y': 'HUMPS_AMOUNT'}, inplace=True)
+    df_speed_humps_no_dup = df_no_dup.drop_duplicates(subset=['ST_INDEX', 'MONTH', 'YEAR'])
+    return df_speed_humps_no_dup
+
+
 def remove_future_data(dir_path, file_name):
     df = ours_read_csv(f"{dir_path}\\{file_name}")
     df = df[(df['MONTH'] < 3) | (df['YEAR'] < 2023)]
@@ -277,7 +314,7 @@ def remove_future_data(dir_path, file_name):
 
 
 def main(dir_path):
-    split_file(file_path=f"{dir_path}\\summons_and_poi_and_collisions_and_streets.csv", frag_amount=5)
+    # split_file(file_path=f"{dir_path}\\summons_and_poi_and_collisions_and_streets.csv", frag_amount=5)
     # create_main_df(dir_path, "Centerline.csv")
     # concat_summons_df(dir_path, "poi_and_collisions_and_streets.csv",
     #                   "agg_united_summons.csv")
@@ -289,9 +326,29 @@ def main(dir_path):
     # bin_summons(dir_path, SUMMONS_FILE)
 
     # unit_summons(dir_path)
-    #aggregate_dfs(dir_path, files_names=["with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv"],
-     #             cols_to_aggregate=["YEAR", "MONTH"])
-    get_date_cols_geo_files(dir_path, files_names=[TURN_CALMING_FILE])
+    # aggregate_dfs(dir_path, files_names=["with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv"],
+    #             cols_to_aggregate=["YEAR", "MONTH"])
+    concat_binary_column_df(dir_path,
+                            "summons_and_poi_and_collisions_and_streets.csv",
+                            "timed_with_streets_VZV_Leading Pedestrian Interval Signals.geojson.csv",
+                            "INCLUDED_LEADING_PEDESTRIAN_INTERVAL_SIGNALS",
+                            "leading_pedestrian_and_")
+
+    concat_binary_column_df(dir_path,
+                            "leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv",
+                            "timed_with_streets_clean_VZV_Street Improvement Projects (SIPs) intersections.csv",
+                            "INCLUDED_INTERSECTIONS_IMPROVEMENTS",
+                            "intersections_improvements_and_")
+
+    concat_binary_column_df(dir_path,
+                            "intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv",
+                            "timed_with_streets_VZV_Turn Traffic Calming.geojson.csv",
+                            "INCLUDED_TURN_TRAFFIC_CALMING",
+                            "turn_traffic_calming_and_")
+
+    concat_speed_humps_df(dir_path,
+                          "turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets",
+                          "timed_with_streets_clean_VZV_Speed Humps.csv")
 
 if __name__ == '__main__':
     main(DIR_PATH_MAX)

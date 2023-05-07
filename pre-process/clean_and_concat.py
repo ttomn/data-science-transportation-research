@@ -15,6 +15,11 @@ DIR_PATH_MAX = "C:\\Users\\maxba\\Desktop\\Study\\Third Year\\Final Project\\dat
 SUMMONS_FILE = "with_streets_not_na_NYPD_B_Summons__Year_to_Date_.csv"
 OLD_SUMMONS_FILE = "with_streets_not_na_NYPD_B_Summons__Historic_.csv"
 COLLISIONS_FILE = "with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv"
+HUMPS_FILE = "with_streets_clean_VZV_Speed Humps"
+INTERSECTION_IMPROVEMENT_FILE = "with_streets_clean_VZV_Street Improvement Projects (SIPs) intersections"
+LEADING_PEDESTRIAN_FILE = "with_streets_VZV_Leading Pedestrian Interval Signals.geojson"
+TURN_CALMING_FILE = "with_streets_VZV_Turn Traffic Calming.geojson"
+
 FILES_NAMES_TO_EXECUTE = [SUMMONS_FILE, OLD_SUMMONS_FILE, COLLISIONS_FILE]
 COLS_TO_TAKE_FROM_SUMMONS = ["VIOLATION_DATE", "VIOLATION_TIME", "VIOLATION_CODE", "VEH_CATEGORY",
                              "STREET", "ST_INDEX"]
@@ -29,8 +34,21 @@ COLS_TO_TAKE_FROM_COLLISIONS = ['CRASH DATE', 'CRASH TIME', 'NUMBER OF PERSONS I
                                 'COLLISION_ID', 'VEHICLE TYPE CODE 1', 'VEHICLE TYPE CODE 2',
                                 'VEHICLE TYPE CODE 3', 'VEHICLE TYPE CODE 4', 'VEHICLE TYPE CODE 5',
                                 'STREET', 'ST_INDEX']
+
+COLS_TO_TAKE_FROM_HUMPS = ("STREET", "ST_INDEX", "end_date", "humps_amount")
+
+COLS_TO_TAKE_FROM_INTERSECTION_IMPROVEMENT = ("STREET", "ST_INDEX", "end_date")
+
+COLS_TO_TAKE_FROM_LEADING_PEDESTRIAN = ("STREET", "ST_INDEX", "install_da")
+
+COLS_TO_TAKE_FROM_TURN_CALMING = ("STREET", "ST_INDEX", "completion")
+
 PARAMS_FOR_PROCESS = {
-    COLLISIONS_FILE: [COLS_TO_TAKE_FROM_COLLISIONS, 'CRASH DATE', 'CRASH TIME']
+    COLLISIONS_FILE: [COLS_TO_TAKE_FROM_COLLISIONS, 'CRASH DATE', 'CRASH TIME'],
+    HUMPS_FILE: [COLS_TO_TAKE_FROM_HUMPS, 'end_date'],
+    INTERSECTION_IMPROVEMENT_FILE: [COLS_TO_TAKE_FROM_INTERSECTION_IMPROVEMENT, "end_date"],
+    LEADING_PEDESTRIAN_FILE: [COLS_TO_TAKE_FROM_LEADING_PEDESTRIAN, "install_da"],
+    TURN_CALMING_FILE: [COLS_TO_TAKE_FROM_TURN_CALMING, "completion"]
 }
 
 weekday_mapping = {
@@ -88,6 +106,36 @@ def get_timing_cols(df, date_col_name, time_col_name):
     return df
 
 
+def get_timing_cols_geo(df, date_col_name):
+    date = pd.DatetimeIndex(df[date_col_name])
+    df['MONTH'] = date.month
+    df['YEAR'] = date.year
+    df['DAY'] = date.day
+    df['DAY_OF_WEEK'] = date.day_name().map(weekday_mapping)
+    df['WEEK_NUMBER'] = date.week
+    df = df.drop(columns=[date_col_name])
+    return df
+
+
+
+def get_date_cols_geo_files(dir_path, files_names):
+    for file_name in files_names:
+        print(f"Start execute file {file_name}:")
+        df = ours_read_csv(f"{dir_path}\\{file_name}")
+        df_params = PARAMS_FOR_PROCESS[file_name]
+        df = df[list(df_params[0])]
+        df = get_timing_cols_geo(df, df_params[1])
+        df.to_csv(f"{dir_path}\\timed_{file_name}.csv")
+        # df = agg_by_time(df, cols_to_aggregate)
+        # df.to_csv(f"{dir_path}\\agg_{file_name}.csv")
+        print(f"\n\n\n############################################")
+        print(f"Finished execute file {file_name}")
+        print(f"############################################\n\n\n")
+
+
+
+
+
 def agg_by_time(df, cols_to_aggregate):
     df["AMOUNT"] = 0
     new_col_name = "AMOUNT"
@@ -103,9 +151,9 @@ def agg_by_time(df, cols_to_aggregate):
 
 def main(dir_path):
     # unit_summons(dir_path)
-    aggregate_dfs(dir_path, files_names=["with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv"],
-                  cols_to_aggregate=["YEAR", "MONTH"])
-
+    #aggregate_dfs(dir_path, files_names=["with_streets_not_na_Motor_Vehicle_Collisions_-_Crashes.csv"],
+     #             cols_to_aggregate=["YEAR", "MONTH"])
+    get_date_cols_geo_files(dir_path, files_names=[TURN_CALMING_FILE])
 
 if __name__ == '__main__':
-    main(DIR_PATH_TOM)
+    main(DIR_PATH_MAX)

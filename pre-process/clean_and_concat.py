@@ -41,6 +41,8 @@ COLS_TO_TAKE_FROM_COLLISIONS = ['CRASH DATE', 'CRASH TIME', 'NUMBER OF PERSONS I
                                 'VEHICLE TYPE CODE 4', 'VEHICLE TYPE CODE 5',
                                 'STREET', 'ST_INDEX']
 
+COLS_TO_TAKE_FROM_CENTERLINE = ['the_geom', 'ST_WIDTH', 'TRAFDIR', 'RW_TYPE', 'SHAPE_Leng']
+
 COLS_TO_TAKE_FROM_HUMPS = ("STREET", "ST_INDEX", "end_date", "humps_amount")
 
 COLS_TO_TAKE_FROM_INTERSECTION_IMPROVEMENT = ("STREET", "ST_INDEX", "end_date")
@@ -76,6 +78,29 @@ POI_MAPPING = {
     13: "Miscellaneous"
 }
 
+DIRECTION_MAPPING = {
+    "FT": "With",
+    "TF": "Against",
+    "TW": "Two-Way",
+    "NV": "Non-Vehicular"  # dropped in OHE
+}
+
+STREET_TYPE_MAPPING = {
+    1: "Street",
+    2: "Highway",
+    3: "Bridge",
+    4: "Tunnel",
+    5: "Boardwalk",
+    6: "PathTrail",
+    7: "StepStreet",
+    8: "Driveway",
+    9: "Ramp",
+    10: "Alley",
+    # 11: "Unknown", No such streets in the data
+    12: "Non-Street",  # dropped in OHE
+    13: "U-Turn",
+    14: "FerryRoute"
+}
 weekday_mapping = {
     'Monday': 0,
     'Tuesday': 1,
@@ -110,6 +135,18 @@ def unit_summons(dir_path):
     old_summons_df = create_summons_cols(old_summons_df)
     all_summons = pd.concat([summons_df, old_summons_df], axis=0)
     all_summons.to_csv(f"{dir_path}\\{SUMMONS_FILE}")
+
+
+def clean_centerline(dir_path, file_name):
+    df = ours_read_csv(f"{dir_path}\\{file_name}")
+    df = df[COLS_TO_TAKE_FROM_CENTERLINE]
+    one_hot_df = pd.get_dummies(df["TRAFDIR"])
+    one_hot_df.columns = DIRECTION_MAPPING.values()
+    df = pd.concat([df, one_hot_df], axis=1)
+    df = df.drop(columns="TRAFDIR")
+    df = df.rename(columns={"SHAPE_Leng": "ST_LENGTH"})
+    df = df.reset_index(names="ST_INDEX")
+    df.to_csv(f"{dir_path}\\cleaned_{file_name}")
 
 
 def create_summons_cols(df):
@@ -239,8 +276,7 @@ def concat_colli_df(dir_path, main_file, file_name):
     df_merged = pd.merge(main_df, df, on=['ST_INDEX', "YEAR", "MONTH"], how='left')
     # df_merged = df_merged.drop(columns="STREET")
     df_merged["AMOUNT_ST_INDEX_YEAR_MONTH"] = df_merged["AMOUNT_ST_INDEX_YEAR_MONTH"].fillna(0)
-    df_merged = df_merged.rename(columns={"AMOUNT_ST_INDEX_YEAR_MONTH": "collisions"})
-    df_merged = df_merged.rename(columns={"collisions": "COLLISIONS"})
+    df_merged = df_merged.rename(columns={"AMOUNT_ST_INDEX_YEAR_MONTH": "COLLISIONS"})
     df_merged.to_csv(f"{dir_path}\\collisions_and_streets.csv")
 
 
@@ -328,9 +364,24 @@ def concat_speed_limits(dir_path, main_file, file_name):
 
 
 def concat_streets_data(dir_path, main_file, file_name):
-    # main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    main_df = ours_read_csv(f"{dir_path}\\{main_file}")
+    # main_df = main_df[(main_df['MONTH'] < 3) | (main_df['YEAR'] < 2023)]
     df = ours_read_csv(f"{dir_path}\\{file_name}")
-    print("hi")
+    df = df.drop(columns=["the_geom"])
+    df_merged = pd.merge(main_df, df, on=['ST_INDEX'], how='left')
+    df_merged.to_csv(f"{dir_path}\\streets_data_and_{main_file}")
+
+
+def bin_and_remove(dir_path, main_file):
+    df = ours_read_csv(f"{dir_path}\\{main_file}")
+    one_hot_df = pd.get_dummies(df["RW_TYPE"])
+    one_hot_df.columns = STREET_TYPE_MAPPING.values()
+    df = pd.concat([df, one_hot_df], axis=1)
+    df = df.drop(columns="RW_TYPE")
+    df = df.drop(columns=["Non-Vehicular", "Non-Street"])
+    df.to_csv(f"{dir_path}\\bin_removed_and_{main_file}")
+
+
 
 
 def main(dir_path):
@@ -376,8 +427,12 @@ def main(dir_path):
     #                       "turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv",
     #                       "timed_with_streets_clean_VZV_Speed Humps.csv")
     # concat_speed_limits(dir_path, main_file="humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv", file_name="with_streets_clean_VZV_Speed Limits.geojson")
-    concat_streets_data(dir_path,
-              main_file="speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv", file_name="Centerline.csv")
+    # clean_centerline(dir_path, file_name="Centerline.csv")
+    # remove_future_data(dir_path, file_name="speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv")
+    # concat_streets_data(dir_path,
+    #           main_file="speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv", file_name="cleaned_Centerline.csv")
+    bin_and_remove(dir_path,
+                        main_file="streets_data_and_speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv")
 
 
 if __name__ == '__main__':

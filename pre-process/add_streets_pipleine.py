@@ -3,6 +3,7 @@ import pandas as pd
 import geopandas as gpd
 import folium
 from shapely.geometry import Point
+from shapely.wkt import loads
 import warnings
 
 from utils import ours_read_csv
@@ -17,7 +18,8 @@ STREET_FILE_NAME = "NYC Street Centerline (CSCL).geojson"
 #                          "NYPD_B_Summons__Year_to_Date_.csv",
 #                          "NYPD_B_Summons__Historic_.csv"]
 
-GEO_FILES_NAMES_TO_EXECUTE = ["Points Of Interest.geojson"]
+GEO_FILES_NAMES_TO_EXECUTE = ["mapping_segmentid_to_geometry.csv"]
+                              # "Points Of Interest.geojson",
                               # "VZV_Speed Humps.geojson",
                               # "VZV_Speed Limits.geojson",
                               # "VZV_Street Improvement Projects (SIPs) intersections.geojson",
@@ -93,6 +95,40 @@ def add_columns_geo(streets_df, streets_buffered_df, dir_path, file_name):
     df.to_csv(f"{dir_path}\\with_streets_{file_name}")
     # plot_with_street_geo_data(df)
 
+
+def add_columns_geo_for_mapping(streets_df, streets_buffered_df, dir_path, file_name):
+    print(f"Starting to proccess {file_name}")
+    df = pd.ours_read_csv(f"{dir_path}\\{file_name}")
+    global non_intersect_counter
+    non_intersect_counter = 0
+
+    def get_closest_street(sample):
+        sample_location = sample["geometry"]
+        df_streets_filtered = streets_df[streets_buffered_df.intersects(sample_location)]
+        if df_streets_filtered.shape[0] == 0:
+            street_index = streets_df.distance(sample["geometry"]).argmin()
+            global non_intersect_counter
+            non_intersect_counter += 1
+        else:
+            inter = df_streets_filtered.intersection(sample_location)
+            uni = df_streets_filtered.union(sample_location)
+            street_filtered_index = (inter.area / uni.area).argmax()
+            street_index = df_streets_filtered.iloc[street_filtered_index]["index"]
+        return streets_df.iloc[street_index]["geometry"], street_index
+    small_df = df.iloc[::10000]
+    small_df['geometry'] = small_df['geometry'].apply(loads)
+    geometry = gpd.GeoSeries(small_df['geometry'])
+    gdf = gpd.GeoDataFrame(small_df, geometry=geometry)
+    gdf[['STREET', 'ST_INDEX']] = gdf.apply(get_closest_street, axis=1, result_type='expand')
+    print(f"data: {file_name} had {non_intersect_counter}"
+          f" number of items with no intersection with a street.")
+    print(f"data have {gdf.shape[0]}"
+          f" rows and {gdf['ST_INDEX'].isna().sum()} st_index null values and "
+          f"{gdf['STREET'].isna().sum()} street null values")
+    gdf.to_csv(f"{dir_path}\\with_streets_{file_name}2")
+    # plot_with_street_geo_data(df)
+
+
 def add_columns_geo_poi(streets_df, streets_buffered_df, dir_path, file_name):
     print(f"Starting to proccess {file_name}")
     df = gpd.read_file(f"{dir_path}\\{file_name}")
@@ -149,7 +185,8 @@ def main(dir_path):
     for file_name in GEO_FILES_NAMES_TO_EXECUTE:
         if IS_GEO_FILES:
             add_columns_geo(streets_df, streets_buffered_df, dir_path, file_name)
-            add_columns_geo_poi(streets_df, streets_buffered_df, dir_path, file_name)
+            # add_columns_geo_for_mapping(streets_df, streets_buffered_df, dir_path, file_name)
+            # add_columns_geo_poi(streets_df, streets_buffered_df, dir_path, file_name)
         if IS_NON_GEO_FILES:
             add_columns_non_geo(streets_df, streets_buffered_df, dir_path, file_name)
 

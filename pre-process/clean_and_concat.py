@@ -365,7 +365,6 @@ def concat_speed_limits(dir_path, main_file, file_name):
 
 def concat_streets_data(dir_path, main_file, file_name):
     main_df = ours_read_csv(f"{dir_path}\\{main_file}")
-    # main_df = main_df[(main_df['MONTH'] < 3) | (main_df['YEAR'] < 2023)]
     df = ours_read_csv(f"{dir_path}\\{file_name}")
     df = df.drop(columns=["the_geom"])
     df_merged = pd.merge(main_df, df, on=['ST_INDEX'], how='left')
@@ -381,6 +380,12 @@ def bin_and_remove(dir_path, main_file):
     df = df.drop(columns=["Non-Vehicular", "Non-Street"])
     df.to_csv(f"{dir_path}\\bin_removed_and_{main_file}")
 
+
+def concat_volume_and_krig(dir_path, mapping_file, volume_file):
+    mapping_df = ours_read_csv(f"{dir_path}\\{mapping_file}")
+    volume_df = ours_read_csv(f"{dir_path}\\{volume_file}")
+    volume_df = volume_df.drop(columns=["ID", "Roadway Name"])
+    print("hi")
 
 
 
@@ -431,8 +436,9 @@ def main(dir_path):
     # remove_future_data(dir_path, file_name="speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv")
     # concat_streets_data(dir_path,
     #           main_file="speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv", file_name="cleaned_Centerline.csv")
-    bin_and_remove(dir_path,
-                        main_file="streets_data_and_speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv")
+    # bin_and_remove(dir_path,
+    #                     main_file="streets_data_and_speed_limits_and_humps_and_turn_traffic_calming_and_intersections_improvements_and_leading_pedestrian_and_summons_and_poi_and_collisions_and_streets.csv")
+    concat_volume_and_krig(dir_path, "with_streets_mapping_segmentid_to_geometry.csv", "Traffic_Volume_Counts.csv")
 
 
 if __name__ == '__main__':
